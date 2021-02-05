@@ -1,98 +1,87 @@
+// @flow
 import React from 'react'
-import {Route, Redirect, Switch} from 'react-router-dom'
-import {App, Users, Dashboard, Login} from 'containers'
-import {RouteAuth} from 'components'
 import {createBrowserHistory, createMemoryHistory} from 'history'
+import {asyncComponent} from 'react-async-component'
+import {Loader, Dimmer, Header, Icon} from 'semantic-ui-react'
+import _ from 'lodash'
+import Dashboard from 'containers/Dashboard'
+import Links from 'containers/Links'
 
-export const history = getHistory()
-
-const loadLazyComponent = url => {
-  return async cb => {
-    const loadComponent = await import(/* webpackMode: "lazy-once", webpackChunkName: "lazy-containers" */ `containers/${url}/index.jsx`)
-    return loadComponent
-  }
+function asyncComponentCreator (url) {
+	return asyncComponent({
+		resolve: () => {
+			if (!process.env.BROWSER) {
+				// flow-disable-next-line
+				return require(`containers/${url}/index.jsx`).default
+			}
+			// flow-disable-next-line: The parameter passed to import() must be a literal string
+			return import(/* webpackChunkName:"[index].[request]" */ `containers/${url}/index.jsx`)
+		},
+		LoadingComponent () {
+			return (
+				<Dimmer active>
+					<Loader size="large" active>
+						Loading page...
+					</Loader>
+				</Dimmer>
+			)
+		},
+		ErrorComponent () {
+			return (
+				<Dimmer active>
+					<Header inverted as="h2" icon textAlign="center">
+						<Icon name="refresh" />
+						Refresh
+						<Header.Subheader>Got error while loading page.</Header.Subheader>
+					</Header>
+				</Dimmer>
+			)
+		},
+		autoResolveES2015Default: true,
+		env: process.env.BROWSER ? 'browser' : 'node',
+		serverMode: 'resolve'
+	})
 }
 
-export const appRouting = [
-  {
-    path: '/',
-    icon: 'newspaper',
-    name: 'Dashboard',
-    exact: true,
-    sidebarVisible: true,
-    tag: RouteAuth,
-    component: Dashboard
-  },
-  {
-    path: '/users',
-    name: 'Users',
-    exact: true,
-    icon: 'users',
-    sidebarVisible: true,
-    tag: RouteAuth,
-    component: Users
-  },
-  {
-    external: true,
-    path: 'https://github.com/Metnew/react-semantic.ui-starter',
-    icon: 'github',
-    name: 'Github',
-    sidebarVisible: true
-  },
-  {
-    path: '/auth',
-    name: 'Auth',
-    tag: Route,
-    component: Login
-  },
-  {
-    path: '/users/:id',
-    name: 'User',
-    lazy: true,
-    exact: true,
-    strict: true,
-    tag: RouteAuth,
-    component: loadLazyComponent('UsersItem')
-  }
-]
+function routingFnCreator (useFor) {
+	// const AsyncNotFound = asyncComponentCreator('NotFound')
+	// Dashboard and Links included in build
+	// NotFound(404) is lazy
+	const routes: any[] = [
+		{
+			path: '/',
+			exact: true,
+			component: Dashboard,
+			name: 'Dashboard'
+		},
+		{
+			path: '/links',
+			exact: true,
+			component: Links,
+			name: 'Links'
+		},
+		{
+			component: asyncComponentCreator('NotFound'),
+			name: '404'
+		}
+	]
 
-/**
- * Returns application routing with protected by AuthCheck func routes
- * @param {Function} authCheck checks is user logged in
- */
-export const Routing = authCheck => {
-  // remove components that aren't application routes, (e.g. github link in sidebar)
-  const routes = appRouting.filter(
-    a => a.tag || a.component || a.lazy || !a.external
-  )
-  // render components that are inside Switch (main view)
-  const routesRendered = routes.map((a, i) => {
-    // get tag for Route.
-    // is it "RouteAuth" `protected route` or "Route"?
-    const Tag = a.tag
-    const {path, exact, strict, component, lazy} = a
-    // can visitor access this route?
-    const canAccess = authCheck
-    // select only props that we need
-    const b = {path, exact, strict, component, canAccess, lazy}
+	const fns = {
+		// Returns routing for React-Router
+		routing () {
+			return routes.map(a => _.pick(a, ['path', 'strict', 'exact', 'component', 'lazy']))
+		},
+		// Returns `name` + `path`. used in Header
+		meta () {
+			return routes.map(a => _.pick(a, ['path', 'name', 'exact', 'strict']))
+		}
+	}
 
-    return <Tag key={i} {...b} />
-  })
-
-  return (
-    <App>
-      <Switch>
-        {routesRendered}
-        <Redirect to="/" />
-      </Switch>
-    </App>
-  )
+	return fns[useFor]
 }
 
-function getHistory () {
-  const basename = process.env.BUILD_DEMO ? '/react-semantic.ui-starter' : ''
-  if (process.env.BABEL_ENV === 'ssr') {
-    return createMemoryHistory()
-  }
-  return createBrowserHistory({basename})
-}
+const createRequiredHistory = process.env.BROWSER ? createBrowserHistory : createMemoryHistory
+
+export const getMetaRoutes = routingFnCreator('meta')
+export const getRouterRoutes = routingFnCreator('routing')
+export const history = createRequiredHistory()

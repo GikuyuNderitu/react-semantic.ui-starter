@@ -1,68 +1,77 @@
-'use strict'
-const path = require('path')
+/**
+ * @file for config stuff that's used for webpack configuration, but isn't passed to webpack compiler
+ */
 
-module.exports = {
-	port: process.env.PORT || 3000,
-	title: 'React-Semantic.UI-Starter',
-	publicPath: '/' ,
-	srcPath: path.join(__dirname, '../src'),
-	srcCommonPath: path.join(__dirname, '../src/common'),
-	distPath: path.join(__dirname, '../dist'),
-	// your app's manifest.json
-	manifest: {
-		name: 'React-Semantic.UI-Starter',
-		short_name: 'RSUIS',
-		description: 'https://github.com/Metnew/react-semantic.ui-starter',
-		icons: [
-	    {
-	      "src": "icons/android-chrome-36x36.png",
-	      "sizes": "36x36",
-	      "type": "image/png"
-	    },
-	    {
-	      "src": "icons/android-chrome-48x48.png",
-	      "sizes": "48x48",
-	      "type": "image/png"
-	    },
-	    {
-	      "src": "icons/android-chrome-72x72.png",
-	      "sizes": "72x72",
-	      "type": "image/png"
-	    },
-	    {
-	      "src": "icons/android-chrome-96x96.png",
-	      "sizes": "96x96",
-	      "type": "image/png"
-	    },
-	    {
-	      "src": "icons/android-chrome-144x144.png",
-	      "sizes": "144x144",
-	      "type": "image/png"
-	    },
-	    {
-	      "src": "icons/android-chrome-192x192.png",
-	      "sizes": "192x192",
-	      "type": "image/png"
-	    },
-	    {
-	      "src": "icons/android-chrome-256x256.png",
-	      "sizes": "256x256",
-	      "type": "image/png"
-	    },
-	    {
-	      "src": "icons/android-chrome-384x384.png",
-	      "sizes": "384x384",
-	      "type": "image/png"
-	    },
-	    {
-	      "src": "icons/android-chrome-512x512.png",
-	      "sizes": "512x512",
-	      "type": "image/png"
-	    }
-	  ],
-		start_url: '.',
-		display: 'standalone',
-		background_color: '#f7f7f7',
-		theme_color: '#009688'
-	}
+import path from 'path'
+import manifest from '../static/manifest'
+
+const {
+	NODE_ENV = 'development',
+	SENTRY_PUBLIC_DSN,
+	GA_ID,
+	ANALYZE_BUNDLE,
+	SENTRY_DSN,
+	PORT = 3000,
+	HOST = 'localhost',
+	INSPECT_ENABLED = true
+} = process.env
+
+// compute isProduction based on NODE_ENV
+const isProduction = process.env.NODE_ENV === 'production'
+const DEV_SERVER_PORT = +PORT + 1
+
+// Paths
+const rootPath = path.join(__dirname, '../') // = "/"
+const distPath = path.join(rootPath, './dist') // = "/dist"
+const srcPath = path.join(rootPath, './src') // = "/src"
+const srcCommonPath = path.join(srcPath, './common') // = "/src/common"
+const publicPath = !isProduction ? `http://localhost:${PORT}/` : '/'
+
+// Vars for server only
+const CLIENT_STATIC_PATH = path.join(distPath, './client') // = "/dist/client"
+const CLIENT_ASSETS_MANIFEST = path.join(CLIENT_STATIC_PATH, './webpack-assets.json')
+
+export default {
+	isProduction,
+	// Env vars
+	NODE_ENV,
+	SENTRY_PUBLIC_DSN,
+	ANALYZE_BUNDLE,
+	GA_ID,
+	CLIENT_STATIC_PATH,
+	CLIENT_ASSETS_MANIFEST,
+	SENTRY_DSN,
+	PORT,
+	HOST,
+	INSPECT_ENABLED,
+	// Client's webpack-dev-server port
+	DEV_SERVER_PORT,
+	// Paths
+	srcPath,
+	srcCommonPath,
+	distPath,
+	rootPath,
+	publicPath,
+	// text for WebpackBannerPlugin
+	banner: 'Apache 2 License. Copyright (c) 2018 Vladimir Metnew. Repo: https://github.com/Metnew/suicrux',
+	// your manifest.json
+	manifest,
+	vendor: [
+		'react',
+		'react-dom',
+		'redux',
+		'history',
+		'react-router',
+		'react-router-dom',
+		'react-router-redux',
+		// 'semantic-ui-react',
+		'redux-thunk',
+		'react-helmet',
+		'lodash',
+		'js-cookie',
+		'store2',
+		'styled-components',
+		'react-headroom'
+	],
+	polyfills: ['isomorphic-fetch']
 }
